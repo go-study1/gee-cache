@@ -1,6 +1,8 @@
 package consistenthash
 
 import (
+	"fmt"
+	"net/url"
 	"strconv"
 	"testing"
 )
@@ -24,4 +26,9 @@ func TestHash(t *testing.T) {
 			t.Errorf("Asking for %s, should have yielded %s", key, v)
 		}
 	}
+}
+
+func TestXxx(t *testing.T) {
+
+	fmt.Println(url.QueryEscape("中国"))
 }
