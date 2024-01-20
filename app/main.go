@@ -29,6 +29,7 @@ func createGeeCache() *geecache.Group {
 	cahce := geecache.NewGroup("hello", 2<<10, geecache.GetterFunc(
 		func(key string) ([]byte, error) {
 			log.Println("[SlowDb] search key", key)
+
 			if v, ok := db[key]; ok {
 				return []byte(v), nil
 			}
@@ -61,6 +62,7 @@ func startApi(apiAddr string, gee *geecache.Group) {
 }
 
 func main() {
+
 	var port int
 	var api bool
 	flag.IntVar(&port, "port", 8081, "server port")
