@@ -10,6 +10,8 @@ import (
 	"sync"
 
 	"github.com/go-study1/gee-cache/consistenthash"
+	"github.com/go-study1/gee-cache/geecachepb"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -62,8 +64,14 @@ func (p *HttpPool) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
+	body, err := proto.Marshal(&geecachepb.Response{Value: view.ByteSlice()})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Context-Type", "application/octet-stream")
-	w.Write(view.ByteSlice())
+	w.Write(body)
 }
 
 func (p *HttpPool) PickPeer(key string) (peer PeerGetter, ok bool) {
@@ -94,24 +102,27 @@ type httpGetter struct {
 	baseURL string //e.g http://127.0.0.1:8081/_geecache/
 }
 
-func (p *httpGetter) Get(group string, key string) ([]byte, error) {
+func (p *httpGetter) Get(in *geecachepb.Request, out *geecachepb.Response) error {
 	u := fmt.Sprintf(
 		"%v%v/%v",
 		p.baseURL,
-		url.QueryEscape(group),
-		url.QueryEscape(key),
+		url.QueryEscape(in.GetGroup()),
+		url.QueryEscape(in.GetKey()),
 	)
 	res, err := http.Get(u)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("server status returnd: %v", res.StatusCode)
+		return fmt.Errorf("server status returnd: %v", res.StatusCode)
 	}
 	bytes, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf("reading response body: %w", err)
+		return fmt.Errorf("reading response body: %w", err)
 	}
-	return bytes, nil
+	if err = proto.Unmarshal(bytes, out); err != nil {
+		return fmt.Errorf("decoding response body:%v", err)
+	}
+	return nil
 }
